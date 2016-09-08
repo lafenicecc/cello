@@ -1,34 +1,42 @@
-# Cello
+![Cello](docs/imgs/logo.png)
+
 [![Build Status](https://travis-ci.org/yeasy/cello.svg?branch=dev)](https://travis-ci.org/yeasy/cello)
 
-Blockchain as a Service Platform.
+PaaS to provide Blockchain as a Service!
 
-By Cello, user can 
+Using Cello, we can 
 
-* Request blockchains with specific configurations instantly, e.g., a 6-node chain using PBFT consensus.
-* Keep a pool of numbers of running chains healthy with no human operations. 
-* Check the system status, scale the chain numbers, change resources... in such a easy way.
+* Obtain blockchains with customized configurations instantly, e.g., a 6-node chain using PBFT consensus.
+* Maintain a pool of running blockchains healthy with no human operations. 
+* Check the system status, scale the chain numbers, change resources... through a dashboard.
+
+![Typical Scenario](docs/imgs/scenario.png)
+
+You can also find more [scenarios](docs/scenario.md).
 
 ## Features
 
-* Smartly manage the lifecycle of blockchains, e.g., create/delete automatically.
-* Nearly instant performance in service response, even with hundreds of chains.
-* Support customized configuration (e.g., size, consensus) in blockchains request, currently we support [hyperledger fabric](https://github.com/hyperledger/fabric).
-* Employ naive docker host or swarm host as the compute nodes.
-* Deploy on top of heterogeneous architecture, e.g., z, power and x86, from bare-metal servers to virtual machines.
-* Support monitor/log functionality with additional components, easy to extend.
+* Manage the lifecycle of blockchains, e.g., create/delete automatically.
+* Response nearly instantly, even with hundreds of chains.
+* Support customized (e.g., size, consensus) blockchains request, currently we support [hyperledger fabric](https://github.com/hyperledger/fabric).
+* Support native Docker host or swarm host as the compute nodes, more supports on the way.
+* Support heterogeneous architecture, e.g., Z, Power and X86, from bare-metal servers to virtual machines.
+* Extend with monitor/log/health features by employing additional components.
 
 ## Docs
 
 ### User Docs
-* [Deployment](docs/deployment.md)
 * [Dashboard](docs/dashboard.md)
 
-### Development Docs
+### Operator Docs
+* [System Requirement](docs/system_requirement.md)
+* [Deployment](docs/deployment.md)
 * [Scenarios](docs/scenario.md)
+
+### Development Docs
 * [Architecture Design](docs/arch.md)
 * [Database Model](docs/db.md)
-* [API](api)
+* [API](api/restserver_v2.md)
 
 ## TODO
 * ~~Add default 404 and 500 error page.~~
@@ -53,10 +61,12 @@ By Cello, user can
 * ~~Add limitation on the running containers.~~
 * ~~Security option and log option (rotate)~~.
 * ~~Refine setup scripts.~~
-* engine: Update api definitions yml files.
-* Support auto fresh based on websocket.
+* restserver: update api definitions yml files.
+* dashboard: support auto fresh based on websocket.
 * Support advanced scheduling.
-* Support new version: multiple port mapping, new chaincode operation api.
+* Support fabric new version: multiple port mapping, new chaincode operation api.
+* Enhance the robustness for chain operations.
+* Fix deleting bug on 2nd page table.
 
 ## Why names Cello?
 Can u find anyone better at playing chains?

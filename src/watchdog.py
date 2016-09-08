@@ -11,7 +11,7 @@ logger.setLevel(LOG_LEVEL)
 logger.addHandler(log_handler)
 
 
-def chain_check_health(chain_id, retries=3, period=1):
+def chain_check_health(chain_id, retries=3, period=5):
     """
     Check the chain health.
 
@@ -25,37 +25,66 @@ def chain_check_health(chain_id, retries=3, period=1):
     #    cluster_handler.release_cluster(c['id'], record=False)
     logger.debug("Chain {}: checking health".format(chain_id))
     chain = cluster_handler.get_by_id(chain_id)
+    if not chain:
+        logger.warn("Not find chain with id = {}".format(chain_id))
+        return
     chain_user_id = chain.get("user_id")
-    if chain_user_id.startswith(SYS_USER):  # system processing
-        time.sleep(5)
-        if cluster_handler.get_by_id(chain_id).get("user_id") == chain_user_id:
+
+    # we should never operate on in-processing chains unless deleting one
+    if chain_user_id.startswith(SYS_USER):
+        if chain_user_id.startswith(SYS_DELETER):  # in system processing, TBD
+            for i in range(retries):
+                time.sleep(period)
+                if cluster_handler.get_by_id(chain_id).get("user_id") != \
+                        chain_user_id:
+                    return
+            logger.info("Delete in-deleting chain {}".format(chain_id))
             cluster_handler.delete(chain_id)
         return
-    else:  # free or used by user
-        for i in range(retries):
-            if cluster_handler.refresh_health(chain_id):  # chain is health
-                logger.debug("Chain {} is healthy!".format(chain_id))
-                return
-        time.sleep(period)
-    logger.debug("Chain {} is unhealthy!".format(chain_id))
+
+    # free or used by user, then check its health
+    for i in range(retries):
+        if cluster_handler.refresh_health(chain_id):  # chain is healthy
+            return
+        else:
+            time.sleep(period)
+    logger.warn("Chain {} is unhealthy!".format(chain_id))
+    # only reset free chains
+    if cluster_handler.get_by_id(chain_id).get("user_id") == "":
+        logger.info("Deleting free unhealthy chain {}".format(chain_id))
+        # cluster_handler.delete(chain_id)
+        cluster_handler.reset_free_one(chain_id)
 
 
 def host_check_chains(host_id):
+    """
+    Check the chain health on the host.
+
+    :param host_id:
+    :return:
+    """
+    logger.debug("Host {}: checking cluster health".format(host_id))
+    clusters = cluster_handler.list(filter_data={"host_id": host_id})
+    for c in clusters:  # concurrent health check is safe for multi-chains
+        t = Thread(target=chain_check_health, args=(c.get("id"),))
+        t.start()
+        t.join(timeout=15)
+
+
+def host_check_fillup(host_id):
     """
     Check one host.
 
     :param host_id:
     :return:
     """
-    logger.debug("Host {}: checking health".format(host_id))
-    clusters = cluster_handler.list(filter_data={"host_id": host_id})
-    for c in clusters:
-        t = Thread(target=chain_check_health, args=(c.get("id"),))
-        t.start()
-        t.join(timeout=5)
+    logger.debug("Host {}: checking fillup".format(host_id))
+    host = host_handler.get_by_id(host_id)
+    if host.get("autofill") == "true":
+        host_handler.fillup(host_id)
 
 
-def host_check(host_id, retries=3, period=1):
+def host_check(host_id, retries=3, period=3):
     """
     Run check on specific host.
     Check status and check each chain's health.
@@ -65,15 +94,17 @@ def host_check(host_id, retries=3, period=1):
     :param period: retry wait
     :return:
     """
-    for i in range(retries):
+    for _ in range(retries):
         if host_handler.refresh_status(host_id):  # host is active
             logger.debug("host {} is active, check its chains".format(host_id))
             host_check_chains(host_id)
+            time.sleep(period)
+            host_check_fillup(host_id)
             break
         time.sleep(period)
 
 
-def watch_run(period=5):
+def watch_run(period=15):
     """
     Run the checking in period.
 
@@ -81,12 +112,12 @@ def watch_run(period=5):
     :return:
     """
     while True:
-        logger.info("Watch dog run with period = %d s", period)
+        logger.info("Watchdog run checks with period = %d s", period)
         hosts = list(host_handler.list())
-        for h in hosts:
+        for h in hosts:  # operating on different host is safe
             t = Thread(target=host_check, args=(h.get("id"),))
             t.start()
-            t.join(timeout=30)
+            t.join(timeout=period)
         time.sleep(period)
 
 
